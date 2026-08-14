@@ -1,0 +1,76 @@
+name: Python CI
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        description: Python version to test against
+        type: string
+        default: "3.13"
+      install:
+        description: Dependency install mode ("uv" for uv.lock, "pip" for requirements.txt)
+        type: string
+        default: uv
+      lint:
+        description: Run ruff check
+        type: boolean
+        default: false
+      pytest-args:
+        description: Arguments passed to pytest
+        type: string
+        default: -q -m "not integration"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        if: inputs.install == 'uv'
+        with:
+          enable-cache: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+          cache: ${{ inputs.install == 'pip' && 'pip' || '' }}
+
+      - name: Install dependencies (uv)
+        if: inputs.install == 'uv'
+        run: uv sync --frozen --all-extras --dev
+
+      - name: Install dependencies (pip)
+        if: inputs.install == 'pip'
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Ensure pytest is available
+        run: |
+          if [ "${{ inputs.install }}" = "uv" ]; then
+            uv run --no-sync python -c "import pytest" 2>/dev/null || uv pip install pytest
+          else
+            python -c "import pytest" 2>/dev/null || pip install pytest
+          fi
+
+      - name: Lint
+        if: inputs.lint
+        run: |
+          if [ "${{ inputs.install }}" = "uv" ]; then
+            uvx ruff check .
+          else
+            pipx run ruff check .
+          fi
+
+      - name: Test
+        run: |
+          if [ "${{ inputs.install }}" = "uv" ]; then
+            uv run --no-sync pytest ${{ inputs.pytest-args }}
+          else
+            pytest ${{ inputs.pytest-args }}
+          fi
