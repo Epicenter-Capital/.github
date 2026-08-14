@@ -61,10 +61,20 @@ jobs:
       - name: Lint
         if: inputs.lint
         run: |
+          # Prefer the repo's own pinned ruff so results match local runs;
+          # fall back to an isolated latest ruff only when it isn't a dependency.
           if [ "${{ inputs.install }}" = "uv" ]; then
-            uvx ruff check .
+            if uv run --no-sync ruff --version >/dev/null 2>&1; then
+              uv run --no-sync ruff check .
+            else
+              uvx ruff check .
+            fi
           else
-            pipx run ruff check .
+            if command -v ruff >/dev/null 2>&1; then
+              ruff check .
+            else
+              pipx run ruff check .
+            fi
           fi
 
       - name: Test
