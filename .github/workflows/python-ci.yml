@@ -19,6 +19,14 @@ on:
         description: Arguments passed to pytest
         type: string
         default: -q -m "not integration"
+      apt-packages:
+        description: Space-separated apt packages the tests need (e.g. ffmpeg)
+        type: string
+        default: ""
+      extra-pip:
+        description: Space-separated extra packages installed into the test env (bridge until they're added to the repo's own dependencies)
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -49,6 +57,19 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+
+      - name: Install system packages
+        if: inputs.apt-packages != ''
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ${{ inputs.apt-packages }}
+
+      - name: Install extra test packages
+        if: inputs.extra-pip != ''
+        run: |
+          if [ "${{ inputs.install }}" = "uv" ]; then
+            uv pip install ${{ inputs.extra-pip }}
+          else
+            pip install ${{ inputs.extra-pip }}
+          fi
 
       - name: Ensure pytest is available
         run: |
