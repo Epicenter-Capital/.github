@@ -27,6 +27,10 @@ on:
         description: Space-separated extra packages installed into the test env (bridge until they're added to the repo's own dependencies)
         type: string
         default: ""
+      test-env:
+        description: Newline-separated KEY=VALUE pairs exported before running tests (dummy values for required Settings fields, never real secrets)
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -78,6 +82,10 @@ jobs:
           else
             python -c "import pytest" 2>/dev/null || pip install pytest
           fi
+
+      - name: Set test environment
+        if: inputs.test-env != ''
+        run: printf '%s\n' "${{ inputs.test-env }}" >> "$GITHUB_ENV"
 
       - name: Lint
         if: inputs.lint
