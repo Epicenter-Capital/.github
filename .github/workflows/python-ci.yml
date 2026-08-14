@@ -108,8 +108,10 @@ jobs:
 
       - name: Test
         run: |
+          # python -m pytest (not bare pytest) so the repo root is on sys.path,
+          # matching how tests import top-level modules locally
           if [ "${{ inputs.install }}" = "uv" ]; then
-            uv run --no-sync pytest ${{ inputs.pytest-args }}
+            uv run --no-sync python -m pytest ${{ inputs.pytest-args }}
           else
-            pytest ${{ inputs.pytest-args }}
+            python -m pytest ${{ inputs.pytest-args }}
           fi
